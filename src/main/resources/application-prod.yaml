@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: media-service
+kurento:
+  ws:
+    url: ws://localhost:8888/kurento

@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Service Call Test</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --panel: #111827;
+            --panel-2: #1f2937;
+            --line: #334155;
+            --text: #e5eefc;
+            --muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-2: #22c55e;
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Tahoma, sans-serif;
+            background:
+                radial-gradient(circle at top right, rgba(56, 189, 248, 0.18), transparent 28%),
+                radial-gradient(circle at top left, rgba(34, 197, 94, 0.12), transparent 25%),
+                linear-gradient(180deg, #020617 0%, #0f172a 100%);
+            color: var(--text);
+        }
+
+        .page {
+            width: min(1200px, calc(100% - 32px));
+            margin: 24px auto 40px;
+        }
+
+        .hero {
+            margin-bottom: 18px;
+            padding: 20px 22px;
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            border-radius: 20px;
+            background: rgba(15, 23, 42, 0.72);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            margin: 0 0 8px;
+            font-size: clamp(28px, 4vw, 44px);
+            line-height: 1;
+        }
+
+        .hero p,
+        .hint,
+        .log {
+            color: var(--muted);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 18px;
+        }
+
+        .card {
+            padding: 18px;
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            border-radius: 20px;
+            background: rgba(17, 24, 39, 0.88);
+            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.28);
+        }
+
+        .card h2 {
+            margin: 0 0 14px;
+            font-size: 18px;
+        }
+
+        .fields {
+            display: grid;
+            gap: 12px;
+        }
+
+        .field label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 13px;
+            color: var(--muted);
+        }
+
+        .field input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: var(--panel-2);
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        .media-options {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .media-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: var(--panel-2);
+            color: var(--text);
+            font-size: 14px;
+        }
+
+        .media-toggle input {
+            margin: 0;
+        }
+
+        .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        button {
+            border: 0;
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s ease, opacity 0.15s ease;
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .primary {
+            background: linear-gradient(135deg, var(--accent), #0ea5e9);
+            color: #062033;
+        }
+
+        .secondary {
+            background: linear-gradient(135deg, #f8fafc, #cbd5e1);
+            color: #0f172a;
+        }
+
+        .danger {
+            background: linear-gradient(135deg, #f87171, var(--danger));
+            color: white;
+        }
+
+        .status {
+            margin-top: 14px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: rgba(56, 189, 248, 0.12);
+            color: #bae6fd;
+            font-size: 14px;
+        }
+
+        .tips {
+            margin-top: 16px;
+            padding: 14px;
+            border-radius: 14px;
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .tips strong {
+            color: #dcfce7;
+        }
+
+        .videos {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 18px;
+        }
+
+        .video-card {
+            overflow: hidden;
+            border-radius: 18px;
+            background: #020617;
+            border: 1px solid rgba(148, 163, 184, 0.14);
+        }
+
+        .video-card header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+            background: rgba(15, 23, 42, 0.92);
+        }
+
+        .video-card header span {
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .media-state {
+            padding: 10px 14px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+            font-size: 13px;
+            color: var(--muted);
+            background: rgba(15, 23, 42, 0.56);
+        }
+
+        video {
+            width: 100%;
+            aspect-ratio: 16 / 10;
+            display: block;
+            background: #000;
+            object-fit: cover;
+        }
+
+        .footer-panel {
+            margin-top: 18px;
+        }
+
+        .log {
+            margin: 0;
+            padding: 14px;
+            min-height: 180px;
+            max-height: 260px;
+            overflow: auto;
+            border-radius: 14px;
+            background: rgba(2, 6, 23, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.14);
+            font-family: Consolas, Monaco, monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        @media (max-width: 980px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .videos {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <section class="hero">
+        <h1>Media Service Test Call</h1>
+        <p>Bir xil room bilan ikki brauzerda oching. Username har brauzerda boshqacha bo'lsin.</p>
+    </section>
+
+    <section class="grid">
+        <aside class="card">
+            <h2>Connection</h2>
+
+            <div class="fields">
+                <div class="field">
+                    <label for="wsUrl">WebSocket URL</label>
+                    <input id="wsUrl" type="text" placeholder="ws://localhost:8080/ws">
+                </div>
+
+                <div class="field">
+                    <label for="roomId">Room ID</label>
+                    <input id="roomId" type="text" value="room-1">
+                </div>
+
+                <div class="field">
+                    <label for="username">Username</label>
+                    <input id="username" type="text">
+                </div>
+
+                <div class="field">
+                    <label>Media</label>
+                    <div class="media-options">
+                        <label class="media-toggle" for="audioEnabled">
+                            <input id="audioEnabled" type="checkbox" checked>
+                            <span>Audio</span>
+                        </label>
+                        <label class="media-toggle" for="videoEnabled">
+                            <input id="videoEnabled" type="checkbox" checked>
+                            <span>Video</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <button id="joinBtn" class="primary">Join Call</button>
+                <button id="leaveBtn" class="danger" disabled>Leave Call</button>
+            </div>
+
+            <div class="actions">
+                <button id="muteBtn" class="secondary" disabled>Mute Mic</button>
+                <button id="cameraBtn" class="secondary" disabled>Camera Off</button>
+            </div>
+
+            <div id="status" class="status">Idle</div>
+
+            <div class="tips">
+                <strong>Qanday test qilasiz:</strong><br>
+                1. Shu sahifani ikki brauzerda yoki ikkita tabda oching.<br>
+                2. Ikkalasida ham bir xil `Room ID` kiriting.<br>
+                3. `Username` lar har xil bo'lsin.<br>
+                4. Ikkalasida ham `Join Call` bosing.
+            </div>
+        </aside>
+
+        <main class="card">
+            <h2>Video</h2>
+
+            <div class="videos">
+                <section class="video-card">
+                    <header>
+                        <strong>Local</strong>
+                        <span>your stream</span>
+                    </header>
+                    <div id="localMediaState" class="media-state">Waiting for media</div>
+                    <video id="localVideo" autoplay muted playsinline></video>
+                </section>
+
+                <section class="video-card">
+                    <header>
+                        <strong>Remote</strong>
+                        <span>incoming stream</span>
+                    </header>
+                    <div id="remoteMediaState" class="media-state">Waiting for peer</div>
+                    <video id="remoteVideo" autoplay playsinline></video>
+                    <audio id="remoteAudio" autoplay playsinline></audio>
+                </section>
+            </div>
+
+            <div class="footer-panel">
+                <h2>Log</h2>
+                <pre id="log" class="log"></pre>
+            </div>
+        </main>
+    </section>
+</div>
+
+<script>
+    const WEBRTC_ICE_SERVERS = [
+        { urls: "stun:stun.l.google.com:19302" },
+        { urls: "stun:stun1.l.google.com:19302" }
+    ];
+
+    const WEBRTC_PEER_CONFIG = {
+        iceServers: WEBRTC_ICE_SERVERS
+    };
+
+    const localVideo = document.getElementById("localVideo");
+    const remoteVideo = document.getElementById("remoteVideo");
+    const remoteAudio = document.getElementById("remoteAudio");
+    const wsUrlInput = document.getElementById("wsUrl");
+    const roomInput = document.getElementById("roomId");
+    const usernameInput = document.getElementById("username");
+    const audioEnabledInput = document.getElementById("audioEnabled");
+    const videoEnabledInput = document.getElementById("videoEnabled");
+    const joinBtn = document.getElementById("joinBtn");
+    const leaveBtn = document.getElementById("leaveBtn");
+    const muteBtn = document.getElementById("muteBtn");
+    const cameraBtn = document.getElementById("cameraBtn");
+    const statusBox = document.getElementById("status");
+    const logBox = document.getElementById("log");
+    const localMediaState = document.getElementById("localMediaState");
+    const remoteMediaState = document.getElementById("remoteMediaState");
+
+    let ws = null;
+    let pc = null;
+    let localStream = null;
+    let remoteStream = null;
+
+    setDefaults();
+    bindEvents();
+
+    function setDefaults() {
+        const defaultWsUrl = buildDefaultWsUrl();
+        wsUrlInput.value = defaultWsUrl;
+        usernameInput.value = "user-" + Math.random().toString(36).slice(2, 8);
+        log("Ready");
+        log("WS URL default: " + defaultWsUrl);
+    }
+
+    function bindEvents() {
+        joinBtn.addEventListener("click", joinCall);
+        leaveBtn.addEventListener("click", leaveCall);
+        muteBtn.addEventListener("click", toggleMute);
+        cameraBtn.addEventListener("click", toggleCamera);
+        window.addEventListener("beforeunload", leaveCall);
+    }
+
+    function buildDefaultWsUrl() {
+        if (location.protocol === "http:" || location.protocol === "https:") {
+            const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+            const host = location.hostname || "localhost";
+            const port = location.port === "8080" ? "8080" : "8080";
+            return protocol + "//" + host + ":" + port + "/ws";
+        }
+
+        return "ws://localhost:8080/ws";
+    }
+
+    function currentUsername() {
+        return usernameInput.value.trim();
+    }
+
+    function currentRoomId() {
+        return roomInput.value.trim();
+    }
+
+    function currentWsUrl() {
+        return wsUrlInput.value.trim();
+    }
+
+    function buildMediaConstraints() {
+        return {
+            audio: audioEnabledInput.checked,
+            video: videoEnabledInput.checked
+        };
+    }
+
+    async function openLocalMedia() {
+        const constraints = buildMediaConstraints();
+
+        if (!constraints.audio && !constraints.video) {
+            throw new Error("Audio yoki video tanlang");
+        }
+
+        try {
+            return await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (error) {
+            if (constraints.audio && constraints.video) {
+                log("Camera + audio ochilmadi, audio-only fallback sinov qilinmoqda");
+                videoEnabledInput.checked = false;
+                return navigator.mediaDevices.getUserMedia({
+                    audio: true,
+                    video: false
+                });
+            }
+
+            throw error;
+        }
+    }
+
+    function describeStream(stream) {
+        if (!stream) {
+            return "No media";
+        }
+
+        const hasAudio = stream.getAudioTracks().length > 0;
+        const hasVideo = stream.getVideoTracks().length > 0;
+
+        if (hasAudio && hasVideo) {
+            return "Audio + Video";
+        }
+
+        if (hasAudio) {
+            return "Audio only";
+        }
+
+        if (hasVideo) {
+            return "Video only";
+        }
+
+        return "No media";
+    }
+
+    function attachLocalPreview() {
+        if (!localStream) {
+            localVideo.srcObject = null;
+            localMediaState.textContent = "Waiting for media";
+            return;
+        }
+
+        const videoTracks = localStream.getVideoTracks();
+        localVideo.srcObject = videoTracks.length > 0 ? new MediaStream(videoTracks) : null;
+        localMediaState.textContent = describeStream(localStream);
+    }
+
+    function attachRemotePreview() {
+        if (!remoteStream) {
+            remoteVideo.srcObject = null;
+            remoteAudio.srcObject = null;
+            remoteMediaState.textContent = "Waiting for peer";
+            return;
+        }
+
+        const videoTracks = remoteStream.getVideoTracks();
+        remoteVideo.srcObject = videoTracks.length > 0 ? new MediaStream(videoTracks) : null;
+        remoteAudio.srcObject = remoteStream;
+        remoteAudio.play().catch(() => {
+            log("Remote audio autoplay blocked");
+        });
+        remoteMediaState.textContent = describeStream(remoteStream);
+    }
+
+    async function joinCall() {
+        if (ws || pc || localStream) {
+            log("Already connected or connecting");
+            return;
+        }
+
+        if (!currentUsername()) {
+            alert("Username kiriting");
+            usernameInput.focus();
+            return;
+        }
+
+        if (!currentRoomId()) {
+            alert("Room ID kiriting");
+            roomInput.focus();
+            return;
+        }
+
+        if (!currentWsUrl()) {
+            alert("WebSocket URL kiriting");
+            wsUrlInput.focus();
+            return;
+        }
+
+        try {
+            setStatus("Opening selected media...");
+            joinBtn.disabled = true;
+
+            localStream = await openLocalMedia();
+            remoteStream = new MediaStream();
+
+            attachLocalPreview();
+            attachRemotePreview();
+            updateMediaButtons();
+
+            setStatus("Connecting to WebSocket...");
+            log("Connecting: " + currentWsUrl());
+
+            ws = new WebSocket(currentWsUrl());
+            attachSocketHandlers();
+        } catch (error) {
+            logError("joinCall failed", error);
+            setStatus("Join failed");
+            joinBtn.disabled = false;
+            cleanupLocalMedia();
+        }
+    }
+
+    function attachSocketHandlers() {
+        ws.onopen = () => {
+            setStatus("WebSocket connected. Sending join...");
+            log("WS open");
+
+            send({
+                type: "join",
+                username: currentUsername(),
+                room: currentRoomId()
+            });
+        };
+
+        ws.onmessage = async ({ data }) => {
+            try {
+                const msg = JSON.parse(data);
+                log("IN  " + JSON.stringify(msg));
+                await handleMessage(msg);
+            } catch (error) {
+                logError("message handling failed", error);
+            }
+        };
+
+        ws.onerror = (event) => {
+            console.error(event);
+            log("WS error");
+            setStatus("WebSocket error");
+        };
+
+        ws.onclose = () => {
+            log("WS closed");
+            setStatus("Disconnected");
+            cleanupPeerConnection();
+            cleanupLocalMedia();
+            ws = null;
+            joinBtn.disabled = false;
+            leaveBtn.disabled = true;
+            muteBtn.disabled = true;
+            cameraBtn.disabled = true;
+        };
+    }
+
+    async function handleMessage(msg) {
+        switch (msg.type) {
+            case "ready":
+                setStatus("Ready received. Creating peer connection...");
+                await ensurePeerConnection();
+                await sendOffer();
+                leaveBtn.disabled = false;
+                break;
+
+            case "answer":
+                if (!pc) {
+                    log("Answer ignored: peer connection missing");
+                    return;
+                }
+
+                await pc.setRemoteDescription({
+                    type: "answer",
+                    sdp: msg.sdp
+                });
+                setStatus("Remote description set");
+                break;
+
+            case "iceCandidate":
+                if (!pc) {
+                    log("ICE candidate ignored: peer connection missing");
+                    return;
+                }
+
+                await pc.addIceCandidate({
+                    candidate: msg.candidate,
+                    sdpMid: msg.sdpMid,
+                    sdpMLineIndex: msg.sdpMLineIndex
+                });
+                break;
+
+            case "peer-left":
+                remoteStream = new MediaStream();
+                attachRemotePreview();
+                setStatus("Peer left: " + msg.username);
+                break;
+
+            case "error":
+                setStatus("Server error");
+                log("Server error: " + msg.message);
+                break;
+
+            default:
+                log("Unknown message type: " + msg.type);
+                break;
+        }
+    }
+
+    async function ensurePeerConnection() {
+        if (pc) {
+            return;
+        }
+
+        pc = new RTCPeerConnection(WEBRTC_PEER_CONFIG);
+
+        localStream.getTracks().forEach((track) => {
+            pc.addTrack(track, localStream);
+        });
+
+        pc.onicecandidate = ({ candidate }) => {
+            if (!candidate || !candidate.candidate) {
+                return;
+            }
+
+            send({
+                type: "ice",
+                username: currentUsername(),
+                room: currentRoomId(),
+                candidate: candidate.candidate,
+                sdpMid: candidate.sdpMid,
+                sdpMLineIndex: candidate.sdpMLineIndex
+            });
+        };
+
+        pc.ontrack = (event) => {
+            if (!remoteStream) {
+                remoteStream = new MediaStream();
+            }
+
+            if (!remoteStream.getTracks().some((track) => track.id === event.track.id)) {
+                remoteStream.addTrack(event.track);
+            }
+
+            attachRemotePreview();
+            setStatus("Remote stream received");
+        };
+
+        pc.onconnectionstatechange = () => {
+            const state = pc ? pc.connectionState : "closed";
+            setStatus("Peer state: " + state);
+            log("PC state: " + state);
+        };
+
+        pc.oniceconnectionstatechange = () => {
+            const state = pc ? pc.iceConnectionState : "closed";
+            log("ICE state: " + state);
+        };
+
+        updateMediaButtons();
+    }
+
+    async function sendOffer() {
+        if (!pc) {
+            throw new Error("Peer connection not ready");
+        }
+
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+
+        send({
+            type: "offer",
+            username: currentUsername(),
+            room: currentRoomId(),
+            sdp: offer.sdp
+        });
+
+        setStatus("Offer sent");
+    }
+
+    function leaveCall() {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            log("Closing WebSocket");
+            ws.close();
+        } else {
+            cleanupPeerConnection();
+            cleanupLocalMedia();
+            ws = null;
+            joinBtn.disabled = false;
+            leaveBtn.disabled = true;
+            muteBtn.disabled = true;
+            cameraBtn.disabled = true;
+            setStatus("Idle");
+        }
+    }
+
+    function toggleMute() {
+        if (!localStream) {
+            return;
+        }
+
+        const audioTrack = localStream.getAudioTracks()[0];
+        if (!audioTrack) {
+            return;
+        }
+
+        audioTrack.enabled = !audioTrack.enabled;
+        muteBtn.textContent = audioTrack.enabled ? "Mute Mic" : "Unmute Mic";
+        log("Mic " + (audioTrack.enabled ? "enabled" : "muted"));
+    }
+
+    function toggleCamera() {
+        if (!localStream) {
+            return;
+        }
+
+        const videoTrack = localStream.getVideoTracks()[0];
+        if (!videoTrack) {
+            return;
+        }
+
+        videoTrack.enabled = !videoTrack.enabled;
+        cameraBtn.textContent = videoTrack.enabled ? "Camera Off" : "Camera On";
+        log("Camera " + (videoTrack.enabled ? "enabled" : "disabled"));
+    }
+
+    function updateMediaButtons() {
+        if (!localStream) {
+            muteBtn.textContent = "Mute Mic";
+            cameraBtn.textContent = "Camera Off";
+            muteBtn.disabled = true;
+            cameraBtn.disabled = true;
+            return;
+        }
+
+        const audioTrack = localStream.getAudioTracks()[0];
+        const videoTrack = localStream.getVideoTracks()[0];
+
+        muteBtn.textContent = !audioTrack || audioTrack.enabled ? "Mute Mic" : "Unmute Mic";
+        cameraBtn.textContent = !videoTrack || videoTrack.enabled ? "Camera Off" : "Camera On";
+        muteBtn.disabled = !audioTrack;
+        cameraBtn.disabled = !videoTrack;
+    }
+
+    function send(data) {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            log("Send skipped: WebSocket not open");
+            return;
+        }
+
+        const payload = JSON.stringify(data);
+        log("OUT " + payload);
+        ws.send(payload);
+    }
+
+    function cleanupPeerConnection() {
+        if (pc) {
+            pc.ontrack = null;
+            pc.onicecandidate = null;
+            pc.onconnectionstatechange = null;
+            pc.oniceconnectionstatechange = null;
+            pc.close();
+            pc = null;
+        }
+
+        remoteStream = null;
+        attachRemotePreview();
+    }
+
+    function cleanupLocalMedia() {
+        if (localStream) {
+            localStream.getTracks().forEach((track) => track.stop());
+            localStream = null;
+        }
+
+        attachLocalPreview();
+        updateMediaButtons();
+    }
+
+    function setStatus(text) {
+        statusBox.textContent = text;
+    }
+
+    function log(message) {
+        const time = new Date().toLocaleTimeString();
+        logBox.textContent += "[" + time + "] " + message + "\n";
+        logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    function logError(prefix, error) {
+        console.error(prefix, error);
+        const message = error && error.message ? error.message : String(error);
+        log(prefix + ": " + message);
+    }
+</script>
+</body>
+</html>
