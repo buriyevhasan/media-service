@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.mediaservice.model.Room;
 import com.mediaservice.model.UserSession;
+import lombok.extern.slf4j.Slf4j;
 import org.kurento.client.IceCandidate;
 import org.kurento.client.KurentoClient;
 import org.kurento.client.MediaPipeline;
@@ -14,6 +15,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 @Service
 public class RoomService {
 
@@ -29,7 +31,7 @@ public class RoomService {
     }
 
     // ── JOIN ──────────────────────────────────────────
-    public String joinRoom(String roomId, UserSession newUser) throws IOException {
+    public Room joinRoom(String roomId, UserSession newUser) throws IOException {
 
         // Xona yo'q bo'lsa yaratish
         rooms.putIfAbsent(roomId, createRoom(roomId));
@@ -49,11 +51,7 @@ public class RoomService {
             msg.put("sdpMid", event.getCandidate().getSdpMid());
             msg.put("sdpMLineIndex", event.getCandidate().getSdpMLineIndex());
 
-            try {
-                newUser.sendMessage(msg.toString());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            newUser.sendMessage(msg.toString());
         });
 
         // Xonaga qo'shish
@@ -71,6 +69,7 @@ public class RoomService {
             }
         }
 
+
         if (recordingService.isRecording(roomId)) {
             recordingService.addParticipant(room, newUser);
         }
@@ -79,8 +78,7 @@ public class RoomService {
         if (room.size() == 2) {
             recordingService.startRecording(room);
         }
-
-        return roomId;
+        return room;
     }
 
     // ── SDP OFFER QAYTA ISHLASH ───────────────────────

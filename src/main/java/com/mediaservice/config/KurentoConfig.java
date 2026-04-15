@@ -11,7 +11,19 @@ public class KurentoConfig {
     private String kurentoUrl;
 
     @Bean
-    public KurentoClient kurentoClient() {
-        return KurentoClient.create(kurentoUrl);
+    public KurentoClient kurentoClient() throws InterruptedException {
+        String url = "ws://localhost:8888/kurento";
+        Exception last = null;
+
+        for (int i = 1; i <= 10; i++) {
+            try {
+                return KurentoClient.create(url);
+            } catch (Exception e) {
+                last = e;
+                Thread.sleep(3000);
+            }
+        }
+
+        throw new IllegalStateException("Could not connect to Kurento after retries", last);
     }
 }

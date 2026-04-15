@@ -1,7 +1,11 @@
 services:
   kurento:
-    image: kurento/kurento-media-server:latest
+    image: kurento/kurento-media-server:7.3.0
     container_name: kurento
     ports:
       - "8888:8888"
+      - "50000-50500:50000-50500/udp"
+      - "50000-50500:50000-50500/tcp"
+    environment:
+      KMS_EXTERNAL_IPV4: 192.168.1.108
     restart: unless-stopped

@@ -25,9 +25,9 @@
             margin: 0;
             font-family: "Segoe UI", Tahoma, sans-serif;
             background:
-                radial-gradient(circle at top right, rgba(56, 189, 248, 0.18), transparent 28%),
-                radial-gradient(circle at top left, rgba(34, 197, 94, 0.12), transparent 25%),
-                linear-gradient(180deg, #020617 0%, #0f172a 100%);
+                    radial-gradient(circle at top right, rgba(56, 189, 248, 0.18), transparent 28%),
+                    radial-gradient(circle at top left, rgba(34, 197, 94, 0.12), transparent 25%),
+                    linear-gradient(180deg, #020617 0%, #0f172a 100%);
             color: var(--text);
         }
 
@@ -319,9 +319,9 @@
             <div class="tips">
                 <strong>Qanday test qilasiz:</strong><br>
                 1. Shu sahifani ikki brauzerda yoki ikkita tabda oching.<br>
-                2. Ikkalasida ham bir xil `Room ID` kiriting.<br>
-                3. `Username` lar har xil bo'lsin.<br>
-                4. Ikkalasida ham `Join Call` bosing.
+                2. Ikkalasida ham bir xil <code>Room ID</code> kiriting.<br>
+                3. <code>Username</code> lar har xil bo'lsin.<br>
+                4. Ikkalasida ham <code>Join Call</code> bosing.
             </div>
         </aside>
 
@@ -389,6 +389,10 @@
     let localStream = null;
     let remoteStream = null;
 
+    let pendingIceCandidates = [];
+    let remoteDescriptionSet = false;
+    let isJoining = false;
+
     setDefaults();
     bindEvents();
 
@@ -436,6 +440,11 @@
             audio: audioEnabledInput.checked,
             video: videoEnabledInput.checked
         };
+    }
+
+    function resetSignalingState() {
+        pendingIceCandidates = [];
+        remoteDescriptionSet = false;
     }
 
     async function openLocalMedia() {
@@ -514,7 +523,7 @@
     }
 
     async function joinCall() {
-        if (ws || pc || localStream) {
+        if (isJoining || ws || pc || localStream) {
             log("Already connected or connecting");
             return;
         }
@@ -538,9 +547,11 @@
         }
 
         try {
-            setStatus("Opening selected media...");
+            isJoining = true;
             joinBtn.disabled = true;
+            resetSignalingState();
 
+            setStatus("Opening selected media...");
             localStream = await openLocalMedia();
             remoteStream = new MediaStream();
 
@@ -556,8 +567,10 @@
         } catch (error) {
             logError("joinCall failed", error);
             setStatus("Join failed");
-            joinBtn.disabled = false;
+            cleanupPeerConnection();
             cleanupLocalMedia();
+            joinBtn.disabled = false;
+            isJoining = false;
         }
     }
 
@@ -592,9 +605,12 @@
         ws.onclose = () => {
             log("WS closed");
             setStatus("Disconnected");
+
             cleanupPeerConnection();
             cleanupLocalMedia();
+
             ws = null;
+            isJoining = false;
             joinBtn.disabled = false;
             leaveBtn.disabled = true;
             muteBtn.disabled = true;
@@ -609,6 +625,7 @@
                 await ensurePeerConnection();
                 await sendOffer();
                 leaveBtn.disabled = false;
+                isJoining = false;
                 break;
 
             case "answer":
@@ -621,7 +638,12 @@
                     type: "answer",
                     sdp: msg.sdp
                 });
+
+                remoteDescriptionSet = true;
                 setStatus("Remote description set");
+                log("Remote description successfully applied");
+
+                await flushPendingIceCandidates();
                 break;
 
             case "iceCandidate":
@@ -630,11 +652,7 @@
                     return;
                 }
 
-                await pc.addIceCandidate({
-                    candidate: msg.candidate,
-                    sdpMid: msg.sdpMid,
-                    sdpMLineIndex: msg.sdpMLineIndex
-                });
+                await handleIncomingIceCandidate(msg);
                 break;
 
             case "peer-left":
@@ -654,10 +672,58 @@
         }
     }
 
+    async function handleIncomingIceCandidate(msg) {
+        const iceCandidate = {
+            candidate: msg.candidate,
+            sdpMid: msg.sdpMid,
+            sdpMLineIndex: msg.sdpMLineIndex
+        };
+
+        if (!remoteDescriptionSet || !pc.remoteDescription) {
+            pendingIceCandidates.push(iceCandidate);
+            log("ICE candidate queued until remote description is set");
+            return;
+        }
+
+        try {
+            await pc.addIceCandidate(iceCandidate);
+            log("ICE candidate applied immediately");
+        } catch (error) {
+            logError("addIceCandidate failed", error);
+        }
+    }
+
+    async function flushPendingIceCandidates() {
+        if (!pc || !pc.remoteDescription) {
+            return;
+        }
+
+        if (pendingIceCandidates.length === 0) {
+            log("No pending ICE candidates to flush");
+            return;
+        }
+
+        log("Flushing pending ICE candidates: " + pendingIceCandidates.length);
+
+        while (pendingIceCandidates.length > 0) {
+            const candidate = pendingIceCandidates.shift();
+
+            try {
+                await pc.addIceCandidate(candidate);
+            } catch (error) {
+                logError("Pending addIceCandidate failed", error);
+            }
+        }
+
+        log("Pending ICE candidates flushed");
+    }
+
     async function ensurePeerConnection() {
         if (pc) {
             return;
         }
+
+        resetSignalingState();
 
         pc = new RTCPeerConnection(WEBRTC_PEER_CONFIG);
 
@@ -729,16 +795,19 @@
         if (ws && ws.readyState === WebSocket.OPEN) {
             log("Closing WebSocket");
             ws.close();
-        } else {
-            cleanupPeerConnection();
-            cleanupLocalMedia();
-            ws = null;
-            joinBtn.disabled = false;
-            leaveBtn.disabled = true;
-            muteBtn.disabled = true;
-            cameraBtn.disabled = true;
-            setStatus("Idle");
+            return;
         }
+
+        cleanupPeerConnection();
+        cleanupLocalMedia();
+
+        ws = null;
+        isJoining = false;
+        joinBtn.disabled = false;
+        leaveBtn.disabled = true;
+        muteBtn.disabled = true;
+        cameraBtn.disabled = true;
+        setStatus("Idle");
     }
 
     function toggleMute() {
@@ -810,6 +879,7 @@
             pc = null;
         }
 
+        resetSignalingState();
         remoteStream = null;
         attachRemotePreview();
     }
